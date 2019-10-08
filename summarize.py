@@ -9,6 +9,7 @@ from collections import Counter
 
 import re
 import os
+import math
 
 class SummarizeWindow(QMainWindow):
     def __init__(self,parent):
