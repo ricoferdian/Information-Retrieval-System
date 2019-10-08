@@ -7,6 +7,33 @@ from matplotlib.figure import Figure
 from collections import Counter
 
 import re
+import random
+
+
+
+class MatplotlibWidget(QWidget):
+    def __init__(self, parent=None):
+        super(MatplotlibWidget, self).__init__(parent)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+
+        self.axis = self.figure.add_subplot(111)
+
+        self.layoutVertical = QVBoxLayout(self)
+        self.layoutVertical.addWidget(self.canvas)
+
+
+class ThreadSample(QThread):
+    newSample = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super(ThreadSample, self).__init__(parent)
+
+    def run(self):
+        randomSample = random.sample(range(0, 10), 10)
+
+        self.newSample.emit(randomSample)
 
 class PlotWindow(QMainWindow):
     def __init__(self, parent=None):

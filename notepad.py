@@ -6,10 +6,7 @@ from PyQt5.QtPrintSupport import *
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemover, StopWordRemoverFactory, ArrayDictionary
 from Sastrawi.Stemmer.StemmerFactory import Stemmer, StemmerFactory
 
-from nltk import sent_tokenize, word_tokenize
-
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 from collections import Counter
@@ -21,30 +18,6 @@ import random
 import plot
 import summarize
 
-
-class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None):
-        super(MatplotlibWidget, self).__init__(parent)
-
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-
-        self.axis = self.figure.add_subplot(111)
-
-        self.layoutVertical = QVBoxLayout(self)
-        self.layoutVertical.addWidget(self.canvas)
-
-
-class ThreadSample(QThread):
-    newSample = pyqtSignal(list)
-
-    def __init__(self, parent=None):
-        super(ThreadSample, self).__init__(parent)
-
-    def run(self):
-        randomSample = random.sample(range(0, 10), 10)
-
-        self.newSample.emit(randomSample)
 
 
 class MainWindow(QMainWindow):
@@ -162,11 +135,11 @@ class MainWindow(QMainWindow):
 
         self.summarizebutton.clicked.connect(self.tfIdf)
 
-        self.plotWindow = PlotWindow(self)
+        self.plotWindow = plot.PlotWindow(self)
 
-        self.plotWindowResult = PlotWindow(self)
+        self.plotWindowResult = plot.PlotWindow(self)
 
-        self.summaryWindow = SummarizeWindow(self)
+        self.summaryWindow = summarize.SummarizeWindow(self)
 
         file_toolbar = QToolBar("Dokumen")
         file_toolbar.setIconSize(QSize(14, 14))
