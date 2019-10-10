@@ -133,14 +133,14 @@ class SummarizeWindow(QMainWindow):
     def summarize(self):
         sentences = sent_tokenize(self.parentWindow.raw.toPlainText())
         total_documents = len(sentences)
-        frequency_matrix = self._create_frequency_matrix(sentences)
-        tf_matrix = self._create_tf_matrix(frequency_matrix)
-        word_per_doc_table = self._create_documents_per_words(frequency_matrix)
-        idf_matrix = self._create_idf_matrix(frequency_matrix, word_per_doc_table, total_documents)
-        tf_idf_matrix = self._create_tf_idf_matrix(tf_matrix, idf_matrix)
-        sentence_value = self._score_sentences(tf_idf_matrix)
-        average_score = self._find_average_score(sentence_value)
-        summary = self._generate_summary(sentences, sentence_value, average_score)
+        frequency_matrix = self.word_in_sentence_frequency(sentences)
+        tf_matrix = self.calc_tf_matrix(frequency_matrix)
+        word_per_doc_table = self.word_freq_in_doc(frequency_matrix)
+        idf_matrix = self.calc_idf_matrix(frequency_matrix, word_per_doc_table, total_documents)
+        tf_idf_matrix = self.calc_tf_idf_matrix(tf_matrix, idf_matrix)
+        sentence_value = self.sentences_scoring(tf_idf_matrix)
+        average_score = self.sentences_average_score(sentence_value)
+        summary = self.create_summary(sentences, sentence_value, average_score)
         print(summary)
         self.material.setPlainText(summary)
 
@@ -201,7 +201,7 @@ class SummarizeWindow(QMainWindow):
     def edit_toggle_wrap(self):
         self.editor.setLineWrapMode(1 if self.editor.lineWrapMode() == 0 else 0)
 
-    def _create_frequency_matrix(self,sentences):
+    def word_in_sentence_frequency(self, sentences):
         frequency_matrix = {}
         dict = self.parentWindow.dictionary.toPlainText()
         factory = StemmerFactory()
@@ -213,6 +213,7 @@ class SummarizeWindow(QMainWindow):
             for word in words:
                 word = word.lower()
                 word = stemmer.stem(word)
+                removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", word)
                 if word in dict:
                     continue
 
@@ -225,7 +226,7 @@ class SummarizeWindow(QMainWindow):
 
         return frequency_matrix
 
-    def _create_tf_matrix(self,freq_matrix):
+    def calc_tf_matrix(self, freq_matrix):
         tf_matrix = {}
 
         for sent, f_table in freq_matrix.items():
@@ -239,7 +240,7 @@ class SummarizeWindow(QMainWindow):
 
         return tf_matrix
 
-    def _create_documents_per_words(self,freq_matrix):
+    def word_freq_in_doc(self, freq_matrix):
         word_per_doc_table = {}
 
         for sent, f_table in freq_matrix.items():
@@ -251,7 +252,7 @@ class SummarizeWindow(QMainWindow):
 
         return word_per_doc_table
 
-    def _create_idf_matrix(self,freq_matrix, count_doc_per_words, total_documents):
+    def calc_idf_matrix(self, freq_matrix, count_doc_per_words, total_documents):
         idf_matrix = {}
 
         for sent, f_table in freq_matrix.items():
@@ -264,11 +265,10 @@ class SummarizeWindow(QMainWindow):
 
         return idf_matrix
 
-    def _create_tf_idf_matrix(self,tf_matrix, idf_matrix):
+    def calc_tf_idf_matrix(self, tf_matrix, idf_matrix):
         tf_idf_matrix = {}
 
         for (sent1, f_table1), (sent2, f_table2) in zip(tf_matrix.items(), idf_matrix.items()):
-
             tf_idf_table = {}
 
             for (word1, value1), (word2, value2) in zip(f_table1.items(),
@@ -279,12 +279,7 @@ class SummarizeWindow(QMainWindow):
 
         return tf_idf_matrix
 
-    def _score_sentences(self,tf_idf_matrix) -> dict:
-        """
-        score a sentence by its word's TF
-        Basic algorithm: adding the TF frequency of every non-stop word in a sentence divided by total no of words in a sentence.
-        :rtype: dict
-        """
+    def sentences_scoring(self, tf_idf_matrix) -> dict:
 
         sentenceValue = {}
 
@@ -302,24 +297,19 @@ class SummarizeWindow(QMainWindow):
 
         return sentenceValue
 
-    def _find_average_score(self,sentenceValue) -> int:
-        """
-        Find the average score from the sentence value dictionary
-        :rtype: int
-        """
-        sumValues = 0
-        for entry in sentenceValue:
-            sumValues += sentenceValue[entry]
+    def sentences_average_score(self, sentenceValue) -> int:
 
-        # Average value of a sentence from original summary_text
         if(len(sentenceValue)==0):
             average = 0
         else:
+            sumValues = 0
+            for entry in sentenceValue:
+                sumValues += sentenceValue[entry]
             average = (sumValues / len(sentenceValue))
 
         return average
 
-    def _generate_summary(self,sentences, sentenceValue, threshold):
+    def create_summary(self, sentences, sentenceValue, threshold):
         sentence_count = 0
         summary = ''
 
@@ -329,3 +319,4 @@ class SummarizeWindow(QMainWindow):
                 sentence_count += 1
 
         return summary
+
