@@ -10,6 +10,7 @@ from collections import Counter
 import re
 import os
 import math
+import summarizer
 
 class SummarizeWindow(QMainWindow):
     def __init__(self,parent):
@@ -53,7 +54,8 @@ class SummarizeWindow(QMainWindow):
         self.status = QStatusBar()
         self.setStatusBar(self.status)
 
-        self.calculateButton.clicked.connect(self.summarize)
+        # self.calculateButton.clicked.connect(self.summarize)
+        self.calculateButton.clicked.connect(self.summarize_out)
 
         file_toolbar = QToolBar("Dokumen")
         file_toolbar.setIconSize(QSize(14, 14))
@@ -129,6 +131,10 @@ class SummarizeWindow(QMainWindow):
         edit_menu.addAction(wrap_action)
 
         self.update_title()
+
+    def summarize_out(self):
+        summary = summarizer.summarize(self.parentWindow.raw.toPlainText(), self.parentWindow.dictionary.toPlainText())
+        self.material.setPlainText(summary)
 
     def summarize(self):
         sentences = sent_tokenize(self.parentWindow.raw.toPlainText())
