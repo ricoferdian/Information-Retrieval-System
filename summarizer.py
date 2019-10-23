@@ -8,20 +8,17 @@ import math
 def main():
     text,dict = openfile()
     parag_sent_count, total_documents = tokenize_parag(text)
-    sentences = sent_tokenize(text)
+    # sentences = sent_tokenize(text)
     # total_documents = len(sentences)
-    frequency_matrix = _create_frequency_matrix(sentences,dict)
-    tf_matrix = calc_tf_matrix(frequency_matrix)
-    word_per_doc_table = word_freq_in_doc(frequency_matrix)
-    idf_matrix = calc_idf_matrix(frequency_matrix, word_per_doc_table, total_documents)
-    tf_idf_matrix = calc_tf_idf_matrix(tf_matrix, idf_matrix)
-    sentence_value = sentences_scoring(tf_idf_matrix)
-    average_score = sentences_average_score(sentence_value)
-    parag_max_score = sentences_parag_maxscore(parag_sent_count,sentence_value)
-    print("PARAG MAX")
-    print(parag_max_score)
-    summary = create_summary(sentences, sentence_value, average_score)
-    print(summary)
+    # frequency_matrix = _create_frequency_matrix(sentences,dict)
+    # tf_matrix = calc_tf_matrix(frequency_matrix)
+    # word_per_doc_table = word_freq_in_doc(frequency_matrix)
+    # idf_matrix = calc_idf_matrix(frequency_matrix, word_per_doc_table, total_documents)
+    # tf_idf_matrix = calc_tf_idf_matrix(tf_matrix, idf_matrix)
+    # sentence_value = sentences_scoring(tf_idf_matrix)
+    # average_score = sentences_average_score(sentence_value)
+    # summary = create_summary(sentences, sentence_value, average_score)
+    # print(summary)
 
 
 def summarize(text,dict):
@@ -43,6 +40,18 @@ def openfile():
     with open('D:\\Libraries\\Tugas\\NLP\\kamus stopword indonesia 2.txt', 'rt') as f:
         dict = f.read()
     return text, dict
+
+def summarizeParag(parag, dict, total_documents):
+    sentences = sent_tokenize(parag)
+    frequency_matrix = _create_frequency_matrix(sentences, dict)
+    tf_matrix = calc_tf_matrix(frequency_matrix)
+    word_per_doc_table = word_freq_in_doc(frequency_matrix)
+    idf_matrix = calc_idf_matrix(frequency_matrix, word_per_doc_table, total_documents)
+    tf_idf_matrix = calc_tf_idf_matrix(tf_matrix, idf_matrix)
+    sentence_value = sentences_scoring(tf_idf_matrix)
+    average_score = sentences_average_score(sentence_value)
+    summary = create_summary(sentences, sentence_value, average_score)
+    return summary
 
 def tokenize_parag(text):
     num = 0
@@ -156,7 +165,6 @@ def sentences_scoring(tf_idf_matrix) -> dict:
 
     return sentenceValue
 
-
 def sentences_average_score(sentenceValue) -> int:
     if (len(sentenceValue) == 0):
         average = 0
@@ -165,21 +173,6 @@ def sentences_average_score(sentenceValue) -> int:
         for entry in sentenceValue:
             sumValues += sentenceValue[entry]
         average = (sumValues / len(sentenceValue))
-
-    return average
-
-def sentences_parag_maxscore(parag_sent_count,sentenceValue):
-    if (len(sentenceValue) == 0):
-        average = 0
-    else:
-        num = 0
-        maxScore = {}
-        while(num < len(parag_sent_count)):
-            maxScore[num] = 0
-            for entry in sentenceValue:
-                if(maxScore[num] < sentenceValue[entry]):
-                    maxScore[num] = sentenceValue[entry]
-
 
     return average
 
