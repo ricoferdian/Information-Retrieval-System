@@ -18,8 +18,6 @@ import random
 import plot
 import summarize
 
-
-
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -102,10 +100,10 @@ class MainWindow(QMainWindow):
 
         v_layout_l.addWidget(self.editor)
         v_layout_l.addLayout(h_l_btnlayout)
-        #v_layout_l.addWidget(self.textFreq)
+        v_layout_l.addWidget(self.textFreq)
         v_layout_m.addWidget(self.textResult)
         v_layout_m.addLayout(h_r_btnlayout)
-        #v_layout_m.addWidget(self.textFreqResult)
+        v_layout_m.addWidget(self.textFreqResult)
 
         h_layout.addLayout(v_layout_l)
         h_layout.addLayout(v_layout_m)
@@ -272,24 +270,28 @@ class MainWindow(QMainWindow):
         self.summaryWindow.show()
 
     def reCalculate(self):
-        num_words = 0
         text = self.editor.toPlainText()
-        num_words += len(text.split())
         removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
-        splitted = re.findall(r'\w+', removed_number)
+        kalimat = removed_number.split('.')
+        num_kalimat = len(kalimat)
+        splitted = removed_number.split()
+        num_words = len(splitted)
+        # splitted = re.findall(r'\w+', removed_number)
         freq = Counter(splitted)
-        self.textCount.setText("Jumlah Kata : " + str(len(freq)))
-        self.textFreq.setText("Frekuensi Kata : " + str(freq.most_common()))
+        self.textCount.setText("Total Kata : " + str(num_words)+" Total Kalimat : "+str(num_kalimat))
+        self.textFreq.setText("Frekuensi Kata : " + str(freq.most_common())+'\nJumlah kata :'+str(len(freq)))
 
     def reCalculateResult(self):
-        num_words = 0
         text = self.textResult.toPlainText()
-        num_words += len(text.split())
         removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
-        splitted = re.findall(r'\w+', removed_number)
+        kalimat = removed_number.split('.')
+        num_kalimat = len(kalimat)
+        splitted = removed_number.split()
+        num_words = len(splitted)
+        # splitted = re.findall(r'\w+', removed_number)
         freq = Counter(splitted)
-        self.textCountResult.setText("Jumlah Kata : " + str(len(freq)))
-        self.textFreqResult.setText("Frekuensi Kata : " + str(freq.most_common()))
+        self.textCountResult.setText("Total Kata : " + str(num_words)+" Total Kalimat : "+str(num_kalimat))
+        self.textFreqResult.setText("Frekuensi Kata : " + str(freq.most_common())+'\nJumlah kata :'+str(len(freq)))
 
     def stem_word(self):
         raw = self.textResult.toPlainText()
@@ -341,17 +343,20 @@ class MainWindow(QMainWindow):
     # Membuka file raw yang akan dilakukan pengecekan
     def file_open(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Text documents (*.txt);All files (*.*)")
-        num_words = 0
         if path:
             try:
                 with open(path, 'rt') as f:
                     text = f.read()
-                    num_words += len(text.split())
                 removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
-                splitted = re.findall(r'\w+', removed_number)
+                kalimat = removed_number.split('.')
+                num_kalimat = len(kalimat)
+                splitted = removed_number.split()
+                num_words = len(splitted)
+                # splitted = re.findall(r'\w+', removed_number)
                 freq = Counter(splitted)
-                self.textCount.setText("Jumlah Kata : " + str(len(freq)))
-                self.textFreq.setText("Frekuensi Kata : " + str(freq.most_common(100)))
+                self.textCount.setText("Total Kata : " + str(num_words)+" Total Kalimat : "+str(num_kalimat))
+                self.textFreq.setText("Frekuensi Kata : " + str(freq.most_common())+'\nJumlah kata :'+str(len(freq)))
+                # self.textFreq.setText("Frekuensi Kata : " + str(freq.most_common(100)))
 
             except Exception as e:
                 self.dialog_critical(str(e))
@@ -433,7 +438,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         self.setWindowTitle(
-            "%s - Natural Language Processing" % (os.path.basename(self.path) if self.path else "Untitled"))
+            "%s - Sistem Temu Kembali Informasi" % (os.path.basename(self.path) if self.path else "Untitled"))
 
     def edit_toggle_wrap(self):
         self.editor.setLineWrapMode(1 if self.editor.lineWrapMode() == 0 else 0)
@@ -443,7 +448,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    app.setApplicationName("Natural Language Processing")
+    app.setApplicationName("Sistem Temu Kembali Informasi")
 
     window = MainWindow()
     app.exec_()
