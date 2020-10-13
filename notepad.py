@@ -271,9 +271,13 @@ class MainWindow(QMainWindow):
 
     def reCalculate(self):
         text = self.editor.toPlainText()
+        text = text.lower()
         removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
         kalimat = removed_number.split('.')
-        num_kalimat = len(kalimat)
+        if(len(kalimat)==1):
+            num_kalimat = 1
+        else:
+            num_kalimat = len(kalimat)-1
         splitted = removed_number.split()
         num_words = len(splitted)
         # splitted = re.findall(r'\w+', removed_number)
@@ -283,9 +287,13 @@ class MainWindow(QMainWindow):
 
     def reCalculateResult(self):
         text = self.textResult.toPlainText()
+        text = text.lower()
         removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
         kalimat = removed_number.split('.')
-        num_kalimat = len(kalimat)
+        if(len(kalimat)==1):
+            num_kalimat = 1
+        else:
+            num_kalimat = len(kalimat)-1
         splitted = removed_number.split()
         num_words = len(splitted)
         # splitted = re.findall(r'\w+', removed_number)
@@ -347,9 +355,13 @@ class MainWindow(QMainWindow):
             try:
                 with open(path, 'rt') as f:
                     text = f.read()
+                text = text.lower()
                 removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
                 kalimat = removed_number.split('.')
-                num_kalimat = len(kalimat)
+                if(len(kalimat)==1):
+                    num_kalimat = 1
+                else:
+                    num_kalimat = len(kalimat)-1
                 splitted = removed_number.split()
                 num_words = len(splitted)
                 # splitted = re.findall(r'\w+', removed_number)
