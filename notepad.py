@@ -13,6 +13,8 @@ from matplotlib.figure import Figure
 
 from collections import Counter
 
+import pdfplumber
+
 import re
 import os
 import sys
@@ -652,10 +654,8 @@ class MainWindow(QMainWindow):
             try:
                 with open(path, 'rt') as f:
                     dict = f.read()
-
             except Exception as e:
                 self.dialog_critical(str(e))
-
             else:
                 self.path = path
                 self.dictionary.setPlainText(dict)
@@ -666,8 +666,30 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Text documents (*.txt)")
         if path:
             try:
-                with open(path, 'rt', encoding="utf8") as f:
-                    text = f.read()
+                if path.lower().endswith('.txt'):
+                    print('opening text file txt')
+                    try:
+                        with open(path, 'rt', encoding="utf8") as f:
+                            print('reading file')
+                            text = f.read()
+                    except Exception as e:
+                        self.dialog_critical(str(e))
+                    else:
+                        print('nggak mau wkwkwkwkwk')
+                elif (path.lower().endswith('.pdf')):
+                    print('pdf', path)
+                    try:
+                        with pdfplumber.open(path) as pdf:
+                            total_pages = len(pdf.pages)
+                            text = ''
+                            for page in range(total_pages):
+                                print('extracting pdf page ', page)
+                                loaded_page = pdf.pages[page]
+                                text += loaded_page.extract_text()
+                    except Exception as e:
+                        self.dialog_critical(str(e))
+                    else:
+                        print('nggak mau wkwkwkwkwk')
                 text = text.lower()
                 removed_number = re.sub("^\d+\s|[0-9]|\s\d+\s|\s\d+$", "", text)
                 kalimat = removed_number.split('.')
