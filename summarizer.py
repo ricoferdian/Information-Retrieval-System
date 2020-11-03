@@ -1,6 +1,7 @@
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
 from nltk import sent_tokenize, word_tokenize
+from nltk.stem import PorterStemmer
 
 import re
 import math
@@ -22,7 +23,10 @@ def main():
 
 
 def summarize(text, dict):
+    print('summarizing in other file')
     sentences, total_sentences_in_doc = parag_tokenizer(text)
+    print('sentences',sentences)
+    print('total_sentences_in_doc',total_sentences_in_doc)
     frequency_matrix = word_in_sentence_frequency(sentences, dict)
     tf_matrix = calc_tf_matrix(frequency_matrix)
     word_freq_in_doc = oneword_freq_in_doc(frequency_matrix)
@@ -36,7 +40,9 @@ def summarize(text, dict):
     return summary
 
 def parag_tokenizer(text):
+    print('textparagraph',text)
     paragraph = text.split('\n')
+    print('paragraph',paragraph)
     num = 0
     total_sentences_in_doc = 0
     sentences = []
@@ -58,7 +64,8 @@ def openfile():
 def word_in_sentence_frequency(parag, dict):
     parag_matrix = {}
     factory = StemmerFactory()
-    stemmer = factory.create_stemmer()
+    # stemmer = factory.create_stemmer()
+    stemmer = PorterStemmer()
     parag_num = 0
     for sentences in parag:
         frequency_matrix = {}

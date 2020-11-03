@@ -4,6 +4,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtPrintSupport import *
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
+from nltk.stem import PorterStemmer
 from nltk import sent_tokenize, word_tokenize
 from collections import Counter
 
@@ -137,6 +138,7 @@ class SummarizeWindow(QMainWindow):
         self.material.setPlainText(summary)
 
     def summarize(self):
+        print('summarizing')
         sentences = sent_tokenize(self.parentWindow.raw.toPlainText())
         total_documents = len(sentences)
         frequency_matrix = self._create_frequency_matrix(sentences)
@@ -210,8 +212,9 @@ class SummarizeWindow(QMainWindow):
     def _create_frequency_matrix(self,sentences):
         frequency_matrix = {}
         dict = self.parentWindow.dictionary.toPlainText()
-        factory = StemmerFactory()
-        stemmer = factory.create_stemmer()
+        # factory = StemmerFactory()
+        stemmer = PorterStemmer()
+        # stemmer = factory.create_stemmer()
 
         for sent in sentences:
             freq_table = {}
