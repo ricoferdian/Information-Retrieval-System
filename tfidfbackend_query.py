@@ -8,8 +8,10 @@ import math
 
 import pdfplumber
 
+import vectorspacemodelbackend_query as vsm
 
-def search_tf_idf(inputquery, filenames, dictfile):
+
+def search_tf_idf(inputquery, filenames, dictfile, vsm_algorithm):
     print(inputquery, filenames, dictfile)
 
     texts = {}
@@ -48,23 +50,35 @@ def search_tf_idf(inputquery, filenames, dictfile):
     queries = word_tokenize(inputquery)
     print(queries)
 
-    return hitung_tf_idf(texts, queries, dictionary)
+    return hitung_tf_idf(texts, queries, dictionary, vsm_algorithm)
+
+def remove_special_characters_multi(texts):
+    newtexts = []
+    for text in texts:
+        regex = re.compile('[^a-zA-Z0-9\s]')
+        newtext = re.sub(regex, '', text)
+        newtexts.append(newtext)
+    return newtexts
 
 def remove_special_characters(text):
     regex = re.compile('[^a-zA-Z0-9\s]')
     text_returned = re.sub(regex, '', text)
     return text_returned
 
-def hitung_tf_idf(texts, queries, dictionary):
+def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
     text_sentences = {}
     i = 0
     for text in texts.values():
-        text = remove_special_characters(text)
         text_sentences[i] = sent_tokenize(text)
+        print("text_sentences[i]",text_sentences[i])
+        text_sentences[i] = remove_special_characters_multi(text_sentences[i])
+        print("text_sentences[i]",text_sentences[i])
         i += 1
     #hitung total dokumen
     total_documents = len(texts)
-    #hitung matriks tf idf
+    #cari term berkaitan dalam satu kalimat
+    queries, token_frequency = get_linked_term_in_documents(text_sentences, dictionary, queries)
+    #hitung matriks tf
     tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries)
     #menghitung df
     df_matrix = calc_document_frequency(tf_matrix, queries)
@@ -74,35 +88,56 @@ def hitung_tf_idf(texts, queries, dictionary):
     idf_matrix, idf_matrix_plus = calc_idf_matrix(ddf_matrix)
     #menghitung matriks w
     W_matrix = calc_W_matrix(tf_matrix, idf_matrix_plus)
+    W_token_matrix = calc_W_token_matrix(token_frequency, idf_matrix_plus)
     #menghitung bobot dokumen
     doc_score_matrix = scoring_matrix(W_matrix)
     print('doc_score_matrix',doc_score_matrix)
-    rank = rank_docs(doc_score_matrix)
-    print('rank',rank)
     #print tabel hasil di terminal
     print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matrix, df_matrix, ddf_matrix, idf_matrix,
-                      idf_matrix_plus, W_matrix, queries)
+                      idf_matrix_plus, W_matrix, queries, token_frequency, W_token_matrix)
+    if(vsm_algorithm is not None):
+        new_doc_score_matrix = vsm.getVectorSpaceModel(queries, W_token_matrix,W_matrix)
+        rank = rank_docs(new_doc_score_matrix)
+        print('rank', rank)
+    else:
+        rank = rank_docs(doc_score_matrix)
+        print('rank', rank)
     return rank
 
-def print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matrix, df_matrix, ddf_matrix, idf_matrix, idf_matrix_plus, W_matrix, queries):
+def print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matrix, df_matrix, ddf_matrix, idf_matrix, idf_matrix_plus, W_matrix, queries, token_frequency,W_token_matrix):
     headers = ['Query']
-    rows_before = ['', '', '', '']
+    rows_before = ['', '', '', '', '', '']
+    headers = headers + ['Q']
     for num in range(total_documents):
         rows_before += ['']
         headers = headers + ['t' + str(num + 1)]
     headers = headers + ['df', 'D\df', 'IDF', 'iDF+1']
+    headers = headers + ['WQ']
     for num in range(total_documents):
         headers = headers + ['W' + str(num + 1)]
     t = PrettyTable(headers)
     for query in queries:
         row = [query]
+
+        if query in token_frequency.keys():
+            row += [token_frequency[query]]
+        else:
+            row += ['0']
+
         for tf in tf_matrix.values():
             if query in tf.keys():
                 row += [tf[query]]
             else:
                 row += ['0']
+
         if query in df_matrix.keys():
             row += [df_matrix[query], ddf_matrix[query], round(idf_matrix[query], 4), round(idf_matrix_plus[query], 4)]
+
+        if query in W_token_matrix.keys():
+            row += [round(W_token_matrix[query], 4)]
+        else:
+            row += ['0']
+
         for W in W_matrix.values():
             if query in W.keys():
                 row += [round(W[query], 4)]
@@ -115,6 +150,28 @@ def print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matr
     rows_before += ['TOTAL']
     t.add_row(rows_before + row)
     print(t)
+
+def get_linked_term_in_documents(text_sentences, dict, queries):
+    stemmer = PorterStemmer()
+    newquery = []
+    token_frequency = {}
+    for docnum, sentences in text_sentences.items():
+        for sent in sentences:
+            words = word_tokenize(sent)
+            for word in words:
+                word = word.lower()
+                word = stemmer.stem(word)
+                if word in dict:
+                    continue
+                if word in queries:
+                    if word in token_frequency:
+                        token_frequency[word] += 1
+                    else:
+                        token_frequency[word] = 1
+                    for new_word in words:
+                        if not any(new_word in s for s in newquery):
+                            newquery.append(new_word)
+    return newquery, token_frequency
 
 def term_in_documents_frequency(text_sentences, dict, queries):
     frequency_matrix = {}
@@ -166,6 +223,15 @@ def calc_idf_matrix(ddf_matrix):
             idf_matrix[word] = 0
 
     return idf_matrix, idf_matrix_plus
+
+def calc_W_token_matrix(tf_matrix, idf_matrix):
+    freq_table = {}
+
+    for word, count in tf_matrix.items():
+        if word in idf_matrix.keys():
+            freq_table[word] = count * idf_matrix[word]
+
+    return freq_table
 
 def calc_W_matrix(tf_matrix, idf_matrix):
     W_matrix = {}

@@ -254,6 +254,7 @@ class MainWindow(QMainWindow):
         self.searchbutton = QPushButton('Cari')
         self.algoritmaComboBox = QComboBox()
         self.algoritmaComboBox.addItem('Algoritma TF-IDF')
+        self.algoritmaComboBox.addItem('Algoritma Cosine Similarity (Vector Space Model)')
         self.algoritmaComboBox.addItem('Algoritma Boolean')
         h_layout_center_top.addWidget(self.searchBox)
         h_layout_center_top.addWidget(self.searchbutton)
@@ -340,7 +341,7 @@ class MainWindow(QMainWindow):
         if(term_dicari and len(self.document_list) and self.dictfile):
             if(self.currentAlgorithm==1):
                 print('tf idf')
-                dictrank = tfidf_backend.search_tf_idf(term_dicari, self.document_list, self.dictfile)
+                dictrank = tfidf_backend.search_tf_idf(term_dicari, self.document_list, self.dictfile, None)
                 print('dictrank',dictrank)
                 self.listfilesresult.clear()
                 for key, weight in dictrank.items():
@@ -348,6 +349,15 @@ class MainWindow(QMainWindow):
                     print('weight',weight)
                     self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
             elif(self.currentAlgorithm==2):
+                print('vsm cosine similarity')
+                dictrank = tfidf_backend.search_tf_idf(term_dicari, self.document_list, self.dictfile, 1)
+                print('dictrank',dictrank)
+                self.listfilesresult.clear()
+                for key, weight in dictrank.items():
+                    print('key',key)
+                    print('weight',weight)
+                    self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
+            elif(self.currentAlgorithm==3):
                 file_result = bool_backend.search_boolean(term_dicari, self.document_list)
                 self.listfilesresult.clear()
                 for file in file_result:
