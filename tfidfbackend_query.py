@@ -169,7 +169,9 @@ def get_linked_term_in_documents(text_sentences, dict, queries):
                     else:
                         token_frequency[word] = 1
                     for new_word in words:
-                        if not any(new_word in s for s in newquery):
+                        new_word = new_word.lower()
+                        new_word = stemmer.stem(new_word)
+                        if not any(new_word in s for s in newquery) and new_word not in dict:
                             newquery.append(new_word)
     return newquery, token_frequency
 

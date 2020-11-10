@@ -107,10 +107,10 @@ def print_tabel_hasil(queries, query_matrix, query_result, document_matrix, docu
     upperrow += ['sqrt(Q)']
     row += [query_result]
     for docnum in document_result.keys():
-        upperrow += ['sqrt(Di)']
+        upperrow += ['sqrt(D'+str(docnum+1)+')']
         row += [round(document_result[docnum], 4)]
     for docnum in dot_document_result.keys():
-        upperrow += ['sum(Q*Di)']
+        upperrow += ['sum(Q*D'+str(docnum+1)+')']
         row += [round(dot_document_result[docnum], 4)]
     t.add_row(upperrow)
     t.add_row(row)

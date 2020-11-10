@@ -262,14 +262,17 @@ class MainWindow(QMainWindow):
         self.listfilesresult = QListWidget()
         h_layout_center_center.addWidget(self.listfilesresult)
         self.selectdictfilebutton = QPushButton('Pilih File Dictionary')
+        self.openresultfilebutton = QPushButton('Buka File')
         self.showtfidftablebuton = QPushButton('Lihat Tabel TF-IDF')
         h_layout_center_bottom.addWidget(self.selectdictfilebutton)
+        h_layout_center_bottom.addWidget(self.openresultfilebutton)
         # h_layout_center_bottom.addWidget(self.showtfidftablebuton)
 
         self.searchbutton.clicked.connect(self.search_term)
         self.algoritmaComboBox.currentIndexChanged.connect(self.algoritmaChanged)
 
         self.selectdictfilebutton.clicked.connect(self.dictfile_open)
+        self.openresultfilebutton.clicked.connect(self.open_result_file_with_default_program)
         self.showtfidftablebuton.clicked.connect(self.show_tfidf_table)
 
         #RIGHT
@@ -292,9 +295,9 @@ class MainWindow(QMainWindow):
         v_layout_right.addLayout(h_layout_right_center)
         v_layout_right.addLayout(h_layout_right_bottom)
 
-        h_layout_main.addLayout(v_layout_left)
-        h_layout_main.addLayout(v_layout_center)
-        h_layout_main.addLayout(v_layout_right)
+        h_layout_main.addLayout(v_layout_left, stretch=20)
+        h_layout_main.addLayout(v_layout_center, stretch=60)
+        h_layout_main.addLayout(v_layout_right, stretch=20)
 
         self.tab2.setLayout(h_layout_main)
 
@@ -372,6 +375,16 @@ class MainWindow(QMainWindow):
         selectedItem = self.listfilesdir.currentItem()
         if(selectedItem):
             selectedItem = selectedItem.text()
+            print('selectedItem',selectedItem)
+            os.startfile(selectedItem)
+        else:
+            self.dialog_critical("Tidak ada file dipilih !")
+
+    def open_result_file_with_default_program(self):
+        selectedItem = self.listfilesresult.currentItem()
+        if(selectedItem):
+            selectedItem = selectedItem.text()
+            selectedItem = selectedItem.split(",")[0]
             print('selectedItem',selectedItem)
             os.startfile(selectedItem)
         else:
