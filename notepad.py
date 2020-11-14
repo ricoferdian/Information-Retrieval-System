@@ -8,7 +8,7 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemover, Sto
 from nltk.stem import PorterStemmer
 from nltk import sent_tokenize, word_tokenize
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from collections import Counter
@@ -25,6 +25,7 @@ import summarize
 import tfidfbackend_query as tfidf_backend
 import booleanbackend_query as bool_backend
 import summarize_file
+import documentLoader as docloader
 
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -210,6 +211,7 @@ class MainWindow(QMainWindow):
 
     def init_search_engine_tab(self):
         self.document_list = []
+        self.preloaded_documents = {}
         self.dictfile = ''
         self.currentAlgorithm = 1
 
@@ -342,9 +344,17 @@ class MainWindow(QMainWindow):
         term_dicari = self.searchBox.text()
         print(term_dicari)
         if(term_dicari and len(self.document_list) and self.dictfile):
+            for document in self.document_list:
+                if document in self.preloaded_documents:
+                    print("self.preloaded_documents[document]",self.preloaded_documents[document])
+                    if self.preloaded_documents[document] is None:
+                        print("NOT PRELOADED. PRELOADING...")
+                        self.preloaded_documents[document] = docloader.loadDocuments(document)
+                    else:
+                        print("ALREADY PRELOADED. SKIPPING...")
             if(self.currentAlgorithm==1):
                 print('tf idf')
-                dictrank = tfidf_backend.search_tf_idf(term_dicari, self.document_list, self.dictfile, None)
+                dictrank = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, None)
                 print('dictrank',dictrank)
                 self.listfilesresult.clear()
                 for key, weight in dictrank.items():
@@ -353,7 +363,7 @@ class MainWindow(QMainWindow):
                     self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
             elif(self.currentAlgorithm==2):
                 print('vsm cosine similarity')
-                dictrank = tfidf_backend.search_tf_idf(term_dicari, self.document_list, self.dictfile, 1)
+                dictrank = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, 1)
                 print('dictrank',dictrank)
                 self.listfilesresult.clear()
                 for key, weight in dictrank.items():
@@ -361,7 +371,7 @@ class MainWindow(QMainWindow):
                     print('weight',weight)
                     self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
             elif(self.currentAlgorithm==3):
-                file_result = bool_backend.search_boolean(term_dicari, self.document_list)
+                file_result = bool_backend.search_boolean(term_dicari, self.preloaded_documents)
                 self.listfilesresult.clear()
                 for file in file_result:
                     self.listfilesresult.addItem(str(file))
@@ -392,9 +402,11 @@ class MainWindow(QMainWindow):
 
     def clear_file_lists(self):
         self.document_list = []
+        self.preloaded_documents = {}
         self.listfilesdir.clear()
 
     def update_file_lists(self):
+        self.listfilesdir.clear()
         for filedir in self.document_list:
             self.listfilesdir.addItem(filedir)
 
@@ -406,15 +418,11 @@ class MainWindow(QMainWindow):
                 if file.endswith(".txt"):
                     print(os.path.join(path, file))
                     self.document_list.append(path+'/'+ file)
+                    self.preloaded_documents[path+'/'+ file] = None
                 elif file.endswith(".pdf"):
                     print(os.path.join(path, file))
                     self.document_list.append(path+'/'+ file)
-                # elif file.endswith(".doc"):
-                #     print(os.path.join(path, file))
-                #     self.document_list.append(path+'/'+ file)
-                # elif file.endswith(".docx"):
-                #     print(os.path.join(path, file))
-                #     self.document_list.append(path+'/'+ file)
+                    self.preloaded_documents[path+'/'+ file] = None
             self.update_file_lists()
 
 
@@ -425,24 +433,8 @@ class MainWindow(QMainWindow):
             print('path', path)
             if path:
                 self.document_list.append(path)
+                self.preloaded_documents[path] = None
         self.update_file_lists()
-                # try:
-                #     print('opening file in path', path)
-                #     with open(path, 'rt') as f:
-                #         text = f.read()
-                #         new_obj = {path:text}
-                #         self.document_list.update(new_obj)
-                #     print('doclist',self.document_list)
-                #
-                # except Exception as e:
-                #     self.dialog_critical(str(e))
-                #
-                # else:
-                #     self.path = path
-                #
-                #     # Menampilkan data teks ke widget editor -> QPlain
-                #     self.editor.setPlainText(text)
-                #     self.update_title()
 
     def init_summarization_tab(self):
         v_layout_l = QVBoxLayout()

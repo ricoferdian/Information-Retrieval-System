@@ -79,28 +79,22 @@ def print_tabel_hasil(queries, query_matrix, query_result, document_matrix, docu
     for num in range(len(document_matrix.keys())):
         headers = headers + ['Q*D' + str(num + 1)]
     t = PrettyTable(headers)
-
-
     for query in queries:
         row = [query]
-
         if query in query_matrix.keys():
             row += [query_matrix[query]]
         else:
             row += ['0']
-
         for dm in document_matrix.values():
             if query in dm.keys():
                 row += [dm[query]]
             else:
                 row += ['0']
-
         for ddm in dot_document_matrix.values():
             if query in ddm.keys():
                 row += [ddm[query]]
             else:
                 row += ['0']
-
         t.add_row(row)
     upperrow = ['']
     row = ['']

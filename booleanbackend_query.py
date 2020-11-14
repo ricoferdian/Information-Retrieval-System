@@ -43,15 +43,30 @@ class SlinkedList:
         self.head = head
 
 def search_boolean(inputquery, filenames):
-    zeroes_and_ones, file_result = boolean_query(inputquery, filenames)
+    zeroes_and_ones, file_result = boolean_query(inputquery, filenames, True)
     return file_result
 
-def boolean_query(inputquery, filenames):
+def load_documents(preloaded_documents):
     Stopwords = set(stopwords.words('english'))
-
-    all_words = []
     dict_global = {}
-    file_folder = 'data/*'
+
+    files_with_index = {}
+    i = 0
+    for key, text in preloaded_documents.items():
+        text = re.sub(re.compile('\d'), '', text)
+        sentences = sent_tokenize(text)
+        words = word_tokenize(text)
+        words = [word for word in words if len(words) > 1]
+        words = [word.lower() for word in words]
+        words = [word for word in words if word not in Stopwords]
+        dict_global.update(finding_all_unique_words_and_freq(words))
+        files_with_index[i] = key
+        i += 1
+    return dict_global, files_with_index
+
+def load_files(filenames):
+    Stopwords = set(stopwords.words('english'))
+    dict_global = {}
 
     files_with_index = {}
     i = 0
@@ -105,6 +120,17 @@ def boolean_query(inputquery, filenames):
 
                     # files_with_index[i] +=loaded_page.extract_text()
                 i += 1
+    return dict_global, files_with_index
+
+def boolean_query(inputquery, filenames, is_preloaded):
+    Stopwords = set(stopwords.words('english'))
+    all_words = []
+    file_folder = 'data/*'
+
+    if is_preloaded:
+        dict_global, files_with_index = load_documents(filenames)
+    else:
+        dict_global, files_with_index = load_files(filenames)
 
     unique_words_all = set(dict_global.keys())
 
