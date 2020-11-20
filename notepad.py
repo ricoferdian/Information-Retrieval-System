@@ -146,7 +146,8 @@ class ShowFilePreprocessing(QDialog):
 
     def calculate(self, text):
         removed_number = text.lower()
-        kalimat = removed_number.split('.')
+        kalimat = sent_tokenize(removed_number)
+        print("lenkalimat", kalimat)
         if(len(kalimat)==1):
             num_kalimat = 1
         else:
@@ -155,7 +156,7 @@ class ShowFilePreprocessing(QDialog):
         num_words = len(splitted)
         # splitted = re.findall(r'\w+', removed_number)
         freq = Counter(splitted)
-        hitungKata = "Total Kata : " + str(num_words)+" Total Kalimat : "+str(num_kalimat)
+        hitungKata = "Total Kata : " + str(num_words)
         hitungFrekuensi = "Frekuensi Kata : " + str(freq.most_common())+'\nJumlah kata :'+str(len(freq))
         return hitungKata,hitungFrekuensi
 
