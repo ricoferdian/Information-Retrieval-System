@@ -1,7 +1,7 @@
 import math
 from prettytable import PrettyTable
 
-def getVectorSpaceModel(queries, query_weight, document_weight):
+def getVectorSpaceModel(queries, query_weight, document_weight, vsm_type):
     query_matrix, query_result = getQueryDistance(query_weight)
     print("query_matrix",query_matrix)
     print("query_result",query_result)
@@ -14,8 +14,10 @@ def getVectorSpaceModel(queries, query_weight, document_weight):
 
     print_tabel_hasil(queries, query_matrix, query_result, document_matrix, document_result, dot_document_matrix,
                       dot_document_result)
-
-    doc_similarity = cosineSimilarity(query_result,document_result,dot_document_result)
+    if (vsm_type is 'dice'):
+        doc_similarity = diceSimilarity(query_result,document_result,dot_document_result)
+    else:
+        doc_similarity = cosineSimilarity(query_result,document_result,dot_document_result)
     print("doc_similarity",doc_similarity)
     return doc_similarity
 
@@ -69,6 +71,20 @@ def cosineSimilarity(query_result,document_result,dot_document_result):
             doc_similarity[docnum] = 0
         else:
             doc_similarity[docnum] = (dot_document_result[docnum])/(query_result*term_weight)
+    return doc_similarity
+
+def diceSimilarity(query_result,document_result,dot_document_result):
+    doc_similarity = {}
+    print("query_result",query_result)
+    print("document_result",document_result)
+    print("dot_document_result",dot_document_result)
+
+    for docnum, term_weight in document_result.items():
+        print("term_weight",term_weight)
+        if term_weight == 0 or query_result == 0:
+            doc_similarity[docnum] = 0
+        else:
+            doc_similarity[docnum] = 2*abs(dot_document_result[docnum])/(pow(query_result,2)+pow(term_weight,2))
     return doc_similarity
 
 def print_tabel_hasil(queries, query_matrix, query_result, document_matrix, document_result, dot_document_matrix, dot_document_result):

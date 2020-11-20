@@ -71,6 +71,158 @@ class TfIdfTableDialog(QDialog):
     def OnOk(self):
         self.close()
 
+class ShowFilePreprocessing(QDialog):
+    def __init__(self, extracted_documents,dictfile, parent=None):
+        super(ShowFilePreprocessing, self).__init__(parent)
+
+        with open(dictfile, 'rt') as f:
+            self.dictionary = f.read()
+
+        self.mainLayout = QVBoxLayout()
+        self.tabs = QTabWidget()
+        self.tab = [0 for i in range(len(extracted_documents))]
+        self.tabLayout = [0 for i in range(len(extracted_documents))]
+        self.textLayout = [0 for i in range(len(extracted_documents))]
+        self.textLeft = [0 for i in range(len(extracted_documents))]
+        self.textCenter = [0 for i in range(len(extracted_documents))]
+        self.textRight = [0 for i in range(len(extracted_documents))]
+        self.btnLayout = [0 for i in range(len(extracted_documents))]
+        self.btnJalankan = [0 for i in range(len(extracted_documents))]
+        self.btnJalankanStem = [0 for i in range(len(extracted_documents))]
+        self.textCount = [0 for i in range(len(extracted_documents))]
+        self.textFreq = [0 for i in range(len(extracted_documents))]
+        index = 0
+        for filepath, document in extracted_documents.items():
+            head, tail = os.path.split(filepath)
+            self.tab[index] = QWidget()
+
+            self.tabLayout[index] = QVBoxLayout()
+
+            self.textLayout[index] = QHBoxLayout()
+            self.btnLayout[index] = QHBoxLayout()
+
+            self.textLeft[index] = QPlainTextEdit()
+            self.textCenter[index] = QPlainTextEdit()
+
+            self.textLayout[index].addWidget(self.textLeft[index])
+            self.textLayout[index].addWidget(self.textCenter[index])
+
+            self.textCount[index] = QLabel()
+            self.textCount[index].setText("Jumlah kata dan token akan muncul disini")
+            self.textCount[index].setFixedWidth(1000)
+            self.textFreq[index] = QLabel()
+            self.textFreq[index].setText("Frekuensi kata akan muncul disini")
+            self.textFreq[index].setFixedWidth(1000)
+
+            self.btnJalankan[index] = QPushButton("Jalankan Preprocessing")
+            self.btnJalankan[index].clicked.connect(self.processDocument)
+
+            self.btnJalankanStem[index] = QPushButton("Jalankan Stemming")
+            self.btnJalankanStem[index].clicked.connect(self.stemDocument)
+
+            self.btnLayout[index].addWidget(self.btnJalankan[index])
+            self.btnLayout[index].addWidget(self.btnJalankanStem[index])
+
+            self.tabLayout[index].addLayout(self.textLayout[index])
+            self.tabLayout[index].addLayout(self.btnLayout[index])
+            self.tabLayout[index].addWidget(self.textCount[index])
+            self.tabLayout[index].addWidget(self.textFreq[index])
+
+            self.tab[index].setLayout(self.tabLayout[index])
+            self.tabs.addTab(self.tab[index], str(tail))
+
+            self.textLeft[index].setPlainText(document)
+
+            index += 1
+
+        self.tabs.resize(300,200)
+        self.mainLayout.addWidget(self.tabs)
+        self.setLayout(self.mainLayout)
+
+    def remove_special_characters(self, text):
+        regex = re.compile('[^a-zA-Z0-9\s]')
+        text_returned = re.sub(regex, '', text)
+        return text_returned
+
+    def calculate(self, text):
+        removed_number = text.lower()
+        kalimat = removed_number.split('.')
+        if(len(kalimat)==1):
+            num_kalimat = 1
+        else:
+            num_kalimat = len(kalimat)-1
+        splitted = removed_number.split()
+        num_words = len(splitted)
+        # splitted = re.findall(r'\w+', removed_number)
+        freq = Counter(splitted)
+        hitungKata = "Total Kata : " + str(num_words)+" Total Kalimat : "+str(num_kalimat)
+        hitungFrekuensi = "Frekuensi Kata : " + str(freq.most_common())+'\nJumlah kata :'+str(len(freq))
+        return hitungKata,hitungFrekuensi
+
+    def updateTextFreq(self, text, index):
+        hitungKata, hitungFrekuensi = self.calculate(text)
+        self.textCount[index].setText(hitungKata)
+        self.textFreq[index].setText(hitungFrekuensi)
+
+    def stem(self, raw):
+        stemmer = PorterStemmer()
+        sentences = sent_tokenize(raw)
+        stem_sentence = []
+        words = word_tokenize(raw)
+        for word in words:
+            print('word',word)
+            word = word.lower()
+            stem_sentence.append(stemmer.stem(word))
+            print('word stemmed',word)
+            if(word!='.'):
+                stem_sentence.append(" ")
+        stem_sentence = "".join(stem_sentence)
+        return stem_sentence
+
+    def preprocessDocument(self, text):
+        text = self.remove_special_characters(text)
+        text = self.remove_stopword(text)
+        return text
+
+    def stemDocument(self):
+        index = self.tabs.currentIndex()
+        text = self.textLeft[index].toPlainText()
+        text = self.preprocessDocument(text)
+        text = self.stem(text)
+        self.updateTextFreq(text, index)
+        self.textCenter[index].setPlainText(text)
+
+    def processDocument(self):
+        index = self.tabs.currentIndex()
+        text = self.textLeft[index].toPlainText()
+        text = self.preprocessDocument(text)
+        self.updateTextFreq(text, index)
+        self.textCenter[index].setPlainText(text)
+
+    def remove_stopword(self, raw):
+        # Data teks diambil dari widget
+        dict = self.dictionary
+        stop_factory = re.findall(r'\w+', dict)
+
+        dictionary = ArrayDictionary(stop_factory)
+        print('try to remove stopword')
+
+        return self.remove_stopword_text(raw, dictionary)
+
+    def remove_stopword_text(self, text, dictionary):
+        words = word_tokenize(text)
+        print('word', words)
+        print('dictionary', dictionary)
+        stopped_words = []
+        for word in words:
+            cword = word.lower()
+            print('cword', cword)
+            if not dictionary.contains(cword):
+                stopped_words.append(word)
+        return ' '.join(stopped_words)
+
+    def OnOk(self):
+        self.close()
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -224,6 +376,7 @@ class MainWindow(QMainWindow):
         h_layout_left_top = QHBoxLayout()
         h_layout_left_center = QHBoxLayout()
         h_layout_left_bottom = QHBoxLayout()
+        h_layout_left_bottom2 = QHBoxLayout()
 
         h_layout_center_top = QHBoxLayout()
         h_layout_center_center = QHBoxLayout()
@@ -245,11 +398,15 @@ class MainWindow(QMainWindow):
         h_layout_left_bottom.addWidget(self.opendirfilebutton)
         h_layout_left_bottom.addWidget(self.cleardirfilebutton)
 
+        self.opentextfilebutton = QPushButton('Lihat Konten dan Preprocessing')
+        h_layout_left_bottom2.addWidget(self.opentextfilebutton)
+
         self.openmultifilebutton.clicked.connect(self.multiple_file_open)
         self.opendirectorybutton.clicked.connect(self.directory_open)
 
         self.opendirfilebutton.clicked.connect(self.open_file_with_default_program)
         self.cleardirfilebutton.clicked.connect(self.clear_file_lists)
+        self.opentextfilebutton.clicked.connect(self.showFileContent)
 
         #CENTER
         self.searchBox = QLineEdit()
@@ -257,11 +414,13 @@ class MainWindow(QMainWindow):
         self.algoritmaComboBox = QComboBox()
         self.algoritmaComboBox.addItem('Algoritma TF-IDF')
         self.algoritmaComboBox.addItem('Algoritma Cosine Similarity (Vector Space Model)')
+        self.algoritmaComboBox.addItem('Algoritma Dice Similarity (Vector Space Model)')
         self.algoritmaComboBox.addItem('Algoritma Boolean')
         h_layout_center_top.addWidget(self.searchBox)
         h_layout_center_top.addWidget(self.searchbutton)
         h_layout_center_top.addWidget(self.algoritmaComboBox)
         self.listfilesresult = QListWidget()
+        self.listfilesresultpath = []
         h_layout_center_center.addWidget(self.listfilesresult)
         self.selectdictfilebutton = QPushButton('Pilih File Dictionary')
         self.openresultfilebutton = QPushButton('Buka File')
@@ -288,6 +447,7 @@ class MainWindow(QMainWindow):
         v_layout_left.addLayout(h_layout_left_top)
         v_layout_left.addLayout(h_layout_left_center)
         v_layout_left.addLayout(h_layout_left_bottom)
+        v_layout_left.addLayout(h_layout_left_bottom2)
 
         v_layout_center.addLayout(h_layout_center_top)
         v_layout_center.addLayout(h_layout_center_center)
@@ -305,11 +465,10 @@ class MainWindow(QMainWindow):
 
     def summarize_selection_result(self):
         print('Summary Hasil Lihat')
-        selectedItem = self.listfilesresult.currentItem()
-        if(selectedItem):
+        selectedItem = self.listfilesresult.currentRow()
+        if(selectedItem is not None and len(self.listfilesresultpath)-1>=selectedItem):
             if(self.dictfile):
-                selectedItem = selectedItem.text()
-                selectedItem = selectedItem.split(",")[0]
+                selectedItem = self.listfilesresultpath[selectedItem]
                 summary = summarize_file.summary_file(selectedItem,self.dictfile)
                 self.previewfilebox.setPlainText(summary)
             else:
@@ -340,43 +499,65 @@ class MainWindow(QMainWindow):
         self.currentAlgorithm = i+1
         print('self.currentAlgorithm',self.currentAlgorithm)
 
+    def preloadDocuments(self, document_list):
+        for document in self.document_list:
+            if document in self.preloaded_documents:
+                print("self.preloaded_documents[document]", self.preloaded_documents[document])
+                if self.preloaded_documents[document] is None:
+                    print("NOT PRELOADED. PRELOADING...")
+                    self.preloaded_documents[document] = docloader.loadDocuments(document)
+                else:
+                    print("ALREADY PRELOADED. SKIPPING...")
     def search_term(self):
         term_dicari = self.searchBox.text()
         print(term_dicari)
         if(term_dicari and len(self.document_list) and self.dictfile):
-            for document in self.document_list:
-                if document in self.preloaded_documents:
-                    print("self.preloaded_documents[document]",self.preloaded_documents[document])
-                    if self.preloaded_documents[document] is None:
-                        print("NOT PRELOADED. PRELOADING...")
-                        self.preloaded_documents[document] = docloader.loadDocuments(document)
-                    else:
-                        print("ALREADY PRELOADED. SKIPPING...")
+            self.preloadDocuments(self.document_list)
             if(self.currentAlgorithm==1):
                 print('tf idf')
-                dictrank = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, None)
+                dictrank, found_sentences, fit_queries = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, None)
                 print('dictrank',dictrank)
                 self.listfilesresult.clear()
+                self.listfilesresultpath = []
+                self.listfilesresult.setSpacing(5)
                 for key, weight in dictrank.items():
                     print('key',key)
                     print('weight',weight)
-                    self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
+                    head, tail = os.path.split(self.document_list[key])
+                    self.listfilesresult.addItem(str(tail)+found_sentences[key]+"\nQuery ditemukan : "+fit_queries[key]+"\nPath : "+str(self.document_list[key])+"\nScore : "+str(weight))
+                    self.listfilesresultpath.append(self.document_list[key])
             elif(self.currentAlgorithm==2):
                 print('vsm cosine similarity')
-                dictrank = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, 1)
+                dictrank, found_sentences, fit_queries = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, 'cosine')
                 print('dictrank',dictrank)
                 self.listfilesresult.clear()
+                self.listfilesresultpath = []
                 for key, weight in dictrank.items():
                     print('key',key)
                     print('weight',weight)
-                    self.listfilesresult.addItem(str(self.document_list[key])+", score : "+str(weight))
+                    head, tail = os.path.split(self.document_list[key])
+                    self.listfilesresult.addItem(str(tail)+found_sentences[key]+"\nQuery ditemukan : "+fit_queries[key]+"\nPath : "+str(self.document_list[key])+"\nScore : "+str(weight))
+                    self.listfilesresultpath.append(self.document_list[key])
             elif(self.currentAlgorithm==3):
-                file_result = bool_backend.search_boolean(term_dicari, self.preloaded_documents)
+                print('vsm cosine similarity')
+                dictrank, found_sentences, fit_queries = tfidf_backend.search_tf_idf_preloaded(term_dicari, self.preloaded_documents, self.dictfile, 'dice')
+                print('dictrank',dictrank)
                 self.listfilesresult.clear()
+                self.listfilesresultpath = []
+                for key, weight in dictrank.items():
+                    print('key',key)
+                    print('weight',weight)
+                    head, tail = os.path.split(self.document_list[key])
+                    self.listfilesresult.addItem(str(tail)+found_sentences[key]+"\nQuery ditemukan : "+fit_queries[key]+"\nPath : "+str(self.document_list[key])+"\nScore : "+str(weight))
+                    self.listfilesresultpath.append(self.document_list[key])
+            elif(self.currentAlgorithm==4):
+                file_result, found_sentences = bool_backend.search_boolean(term_dicari, self.preloaded_documents)
+                self.listfilesresult.clear()
+                self.listfilesresultpath = []
                 for file in file_result:
-                    self.listfilesresult.addItem(str(file))
-
-
+                    head, tail = os.path.split(file)
+                    self.listfilesresult.addItem(str(tail)+found_sentences[file]+"\nPath : "+str(file))
+                    self.listfilesresultpath.append(file)
         else:
             self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
 
@@ -390,11 +571,22 @@ class MainWindow(QMainWindow):
         else:
             self.dialog_critical("Tidak ada file dipilih !")
 
+    def showFileContent(self):
+        if (len(self.document_list) and self.dictfile):
+            self.preloadDocuments(self.document_list)
+            dlg = ShowFilePreprocessing(self.preloaded_documents, self.dictfile)
+            if dlg.exec_():
+                print("Success exec")
+        else:
+            self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
+
     def open_result_file_with_default_program(self):
-        selectedItem = self.listfilesresult.currentItem()
-        if(selectedItem):
-            selectedItem = selectedItem.text()
-            selectedItem = selectedItem.split(",")[0]
+        selectedItem = self.listfilesresult.currentRow()
+        print('selectedItem',selectedItem)
+        print('self.listfilesresultpath',self.listfilesresultpath)
+        print('len(self.listfilesresultpath)',len(self.listfilesresultpath))
+        if(selectedItem is not None and len(self.listfilesresultpath)-1>=selectedItem):
+            selectedItem = self.listfilesresultpath[selectedItem]
             print('selectedItem',selectedItem)
             os.startfile(selectedItem)
         else:
@@ -546,6 +738,8 @@ class MainWindow(QMainWindow):
         self.plotWindowResult = plot.PlotWindow(self)
 
         self.summaryWindow = summarize.SummarizeWindow(self)
+
+        self.allresulttextwindow = summarize.SummarizeWindow(self)
 
         self.tab1.setLayout(h_layout)
 

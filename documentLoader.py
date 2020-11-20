@@ -19,5 +19,7 @@ def loadDocuments(filename):
             for page in range(total_pages):
                 print('extracting pdf page ',page)
                 loaded_page = pdf.pages[page]
-                text +=loaded_page.extract_text()
+                newtext = loaded_page.extract_text()
+                if newtext is not None:
+                    text +=loaded_page.extract_text()
             return text

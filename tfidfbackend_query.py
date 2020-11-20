@@ -86,7 +86,7 @@ def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
     total_documents = len(texts)
     if (vsm_algorithm is not None):
         #cari term berkaitan dalam satu kalimat. VSM butuh ini
-        queries, token_frequency = get_linked_term_in_documents(text_sentences, dictionary, queries)
+        queries, token_frequency, found_sentences, fit_queries = get_linked_term_in_documents(text_sentences, dictionary, queries)
         #hitung matriks tf
         tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries)
         #menghitung df
@@ -105,10 +105,15 @@ def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
         #print tabel hasil di terminal
         print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matrix, df_matrix, ddf_matrix, idf_matrix,
                           idf_matrix_plus, W_matrix, queries, token_frequency, W_token_matrix)
-        new_doc_score_matrix = vsm.getVectorSpaceModel(queries, W_token_matrix,W_matrix)
+        if (vsm_algorithm is 'dice'):
+            new_doc_score_matrix = vsm.getVectorSpaceModel(queries, W_token_matrix,W_matrix, 'dice')
+        else:
+            new_doc_score_matrix = vsm.getVectorSpaceModel(queries, W_token_matrix,W_matrix, 'cosine')
         rank = rank_docs(new_doc_score_matrix)
         print('rank', rank)
     else:
+        #cari term berkaitan dalam satu kalimat. VSM butuh ini
+        unused, token_frequency, found_sentences, fit_queries = get_linked_term_in_documents(text_sentences, dictionary, queries)
         #hitung matriks tf
         tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries)
         #menghitung df
@@ -127,7 +132,7 @@ def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
                           idf_matrix_plus, W_matrix, queries, None, None)
         rank = rank_docs(doc_score_matrix)
         print('rank', rank)
-    return rank
+    return rank, found_sentences, fit_queries
 
 def print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matrix, df_matrix, ddf_matrix, idf_matrix, idf_matrix_plus, W_matrix, queries, token_frequency,W_token_matrix):
     headers = ['Query']
@@ -188,7 +193,12 @@ def get_linked_term_in_documents(text_sentences, dict, queries):
     stemmer = PorterStemmer()
     newquery = []
     token_frequency = {}
+    newsentences = {}
+    fitqueries = {}
     for docnum, sentences in text_sentences.items():
+        sentCount = 0
+        fitqueries[docnum] = ""
+        newsentences[docnum] = ""
         for sent in sentences:
             words = word_tokenize(sent)
             for word in words:
@@ -197,10 +207,15 @@ def get_linked_term_in_documents(text_sentences, dict, queries):
                 if word in dict:
                     continue
                 if word in queries:
+                    if word not in fitqueries[docnum]:
+                        fitqueries[docnum] += word+", "
                     if word in token_frequency:
                         token_frequency[word] += 1
                     else:
                         token_frequency[word] = 1
+                    if sentCount < 2:
+                        newsentences[docnum] += "\n"+sent
+                        sentCount += 1
                     for new_word in words:
                         new_word = remove_special_characters(new_word)
                         if new_word is None:
@@ -209,7 +224,7 @@ def get_linked_term_in_documents(text_sentences, dict, queries):
                         new_word = stemmer.stem(new_word)
                         if not any(new_word in s for s in newquery) and new_word not in dict:
                             newquery.append(new_word)
-    return newquery, token_frequency
+    return newquery, token_frequency, newsentences, fitqueries
 
 def term_in_documents_frequency(text_sentences, dict, queries):
     frequency_matrix = {}

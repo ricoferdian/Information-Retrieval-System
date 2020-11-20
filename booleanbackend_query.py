@@ -43,8 +43,8 @@ class SlinkedList:
         self.head = head
 
 def search_boolean(inputquery, filenames):
-    zeroes_and_ones, file_result = boolean_query(inputquery, filenames, True)
-    return file_result
+    zeroes_and_ones, file_result, new_sentences = boolean_query(inputquery, filenames, True)
+    return file_result, new_sentences
 
 def load_documents(preloaded_documents):
     Stopwords = set(stopwords.words('english'))
@@ -139,10 +139,11 @@ def boolean_query(inputquery, filenames, is_preloaded):
         linked_list_data[word] = SlinkedList()
         linked_list_data[word].head = Node(1,Node)
 
-
-    word_freq_in_doc = {}
     i = 0
+    newsentences = {}
     for filename in filenames:
+        sentCount = 0
+        newsentences[filename] = ""
         print('opening filename',filename)
         if filename.lower().endswith('.txt'):
             print('opening text file txt')
@@ -154,16 +155,20 @@ def boolean_query(inputquery, filenames, is_preloaded):
 
                     text = re.sub(re.compile('\d'), '', text)
                     sentences = sent_tokenize(text)
-                    words = word_tokenize(text)
-                    words = [word for word in words if len(words) > 1]
-                    words = [word.lower() for word in words]
-                    words = [word for word in words if word not in Stopwords]
-                    word_freq_in_doc = finding_all_unique_words_and_freq(words)
-                    for word in word_freq_in_doc.keys():
-                        linked_list = linked_list_data[word].head
-                        while linked_list.nextval is not None:
-                            linked_list = linked_list.nextval
-                        linked_list.nextval = Node(i ,word_freq_in_doc[word])
+                    for sent in sentences:
+                        words = word_tokenize(sent)
+                        words = [word for word in words if len(words) > 1]
+                        words = [word.lower() for word in words]
+                        words = [word for word in words if word not in Stopwords]
+                        word_freq_in_doc = finding_all_unique_words_and_freq(words)
+                        for word in word_freq_in_doc.keys():
+                            linked_list = linked_list_data[word].head
+                            if sentCount < 1:
+                                newsentences[filename] += "\n"+sent
+                                sentCount += 1
+                            while linked_list.nextval is not None:
+                                linked_list = linked_list.nextval
+                            linked_list.nextval = Node(i ,word_freq_in_doc[word])
 
                     # files_with_index[i] = text
                     i += 1
@@ -185,16 +190,20 @@ def boolean_query(inputquery, filenames, is_preloaded):
 
                 text = re.sub(re.compile('\d'), '', text)
                 sentences = sent_tokenize(text)
-                words = word_tokenize(text)
-                words = [word for word in words if len(words) > 1]
-                words = [word.lower() for word in words]
-                words = [word for word in words if word not in Stopwords]
-                word_freq_in_doc = finding_all_unique_words_and_freq(words)
-                for word in word_freq_in_doc.keys():
-                    linked_list = linked_list_data[word].head
-                    while linked_list.nextval is not None:
-                        linked_list = linked_list.nextval
-                    linked_list.nextval = Node(i ,word_freq_in_doc[word])
+                for sent in sentences:
+                    words = word_tokenize(sent)
+                    words = [word for word in words if len(words) > 1]
+                    words = [word.lower() for word in words]
+                    words = [word for word in words if word not in Stopwords]
+                    word_freq_in_doc = finding_all_unique_words_and_freq(words)
+                    for word in word_freq_in_doc.keys():
+                        linked_list = linked_list_data[word].head
+                        if sentCount < 1:
+                            newsentences[filename] += "\n"+sent
+                            sentCount += 1
+                        while linked_list.nextval is not None:
+                            linked_list = linked_list.nextval
+                        linked_list.nextval = Node(i ,word_freq_in_doc[word])
 
                     # files_with_index[i] +=loaded_page.extract_text()
                 i += 1
@@ -224,7 +233,7 @@ def boolean_query(inputquery, filenames, is_preloaded):
             zeroes_and_ones_of_all_words.append(zeroes_and_ones)
         else:
             print(word, " not found")
-            return
+            # return
     print('zeroes_and_ones_of_all_words',zeroes_and_ones_of_all_words)
     print('next')
     if(len(connecting_words)):
@@ -262,7 +271,7 @@ def boolean_query(inputquery, filenames, is_preloaded):
             cnt = cnt + 1
 
         print('files',files)
-        return zeroes_and_ones_of_all_words, files
+        return zeroes_and_ones_of_all_words, files, newsentences
     else:
         print('done')
         files = []
@@ -272,7 +281,7 @@ def boolean_query(inputquery, filenames, is_preloaded):
             if index == 1:
                 files.append(files_with_index[cnt])
             cnt = cnt + 1
-        return zeroes_and_ones_of_all_words, files
+        return zeroes_and_ones_of_all_words, files, newsentences
 
 def rank_docs(score_matrix):
     return {k: v for k, v in sorted(score_matrix.items(), key=lambda item: item[1], reverse=True)}
