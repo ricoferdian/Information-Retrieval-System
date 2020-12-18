@@ -750,7 +750,7 @@ class MainWindow(QMainWindow):
             print('vsm cosine similarity')
             dictrank, found_sentences, fit_queries = tfidf_backend.search_tf_idf_preloaded(term_dicari.lower(),
                                                                                            self.preloaded_documents_tbir,
-                                                                                           self.dictfile_tbir, None)
+                                                                                           self.dictfile_tbir, None, True)
             print('dictrank', dictrank)
             self.listfilesresult_tbir.clear()
 

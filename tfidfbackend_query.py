@@ -1,5 +1,6 @@
 
 from nltk import sent_tokenize, word_tokenize, PorterStemmer
+from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
 from prettytable import PrettyTable
 
@@ -9,16 +10,16 @@ import math
 import pdfplumber
 
 import vectorspacemodelbackend_query as vsm
-def search_tf_idf_preloaded(inputquery, preloaded_documents, dictfile, vsm_algorithm):
+def search_tf_idf_preloaded(inputquery, preloaded_documents, dictfile, vsm_algorithm, is_indonesian = False):
     texts = {}
     i = 0
     for key, value in preloaded_documents.items():
         print("value",value)
         texts[i] = value
         i += 1
-    return search(texts, inputquery, dictfile, vsm_algorithm)
+    return search(texts, inputquery, dictfile, vsm_algorithm, is_indonesian)
 
-def search(texts, inputquery, dictfile, vsm_algorithm):
+def search(texts, inputquery, dictfile, vsm_algorithm, is_indonesian):
     print('opening dict', dictfile)
     with open(dictfile, 'rt') as f:
         dictionary = f.read()
@@ -26,7 +27,7 @@ def search(texts, inputquery, dictfile, vsm_algorithm):
     queries = word_tokenize(inputquery)
     print(queries)
 
-    return hitung_tf_idf(texts, queries, dictionary, vsm_algorithm)
+    return hitung_tf_idf(texts, queries, dictionary, vsm_algorithm, is_indonesian)
 
 def search_tf_idf(inputquery, filenames, dictfile, vsm_algorithm):
     print(inputquery, filenames, dictfile)
@@ -73,7 +74,7 @@ def remove_special_characters(text):
     text_returned = re.sub(regex, '', text)
     return text_returned
 
-def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
+def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm, is_indonesian):
     text_sentences = {}
     i = 0
     for text in texts.values():
@@ -86,9 +87,9 @@ def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
     total_documents = len(texts)
     if (vsm_algorithm is not None):
         #cari term berkaitan dalam satu kalimat. VSM butuh ini
-        queries, token_frequency, found_sentences, fit_queries = get_linked_term_in_documents(text_sentences, dictionary, queries)
+        queries, token_frequency, found_sentences, fit_queries = get_linked_term_in_documents(text_sentences, dictionary, queries, is_indonesian)
         #hitung matriks tf
-        tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries)
+        tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries, is_indonesian)
         #menghitung df
         df_matrix = calc_document_frequency(tf_matrix, queries)
         #menghitung d/df
@@ -115,7 +116,7 @@ def hitung_tf_idf(texts, queries, dictionary, vsm_algorithm):
         #cari term berkaitan dalam satu kalimat. VSM butuh ini
         unused, token_frequency, found_sentences, fit_queries = get_linked_term_in_documents(text_sentences, dictionary, queries)
         #hitung matriks tf
-        tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries)
+        tf_matrix = term_in_documents_frequency(text_sentences, dictionary, queries, is_indonesian)
         #menghitung df
         df_matrix = calc_document_frequency(tf_matrix, queries)
         #menghitung d/df
@@ -189,8 +190,12 @@ def print_tabel_hasil(text_sentences, doc_score_matrix, total_documents, tf_matr
     t.add_row(rows_before + row)
     print(t)
 
-def get_linked_term_in_documents(text_sentences, dict, queries):
-    stemmer = PorterStemmer()
+def get_linked_term_in_documents(text_sentences, dict, queries, is_indonesian):
+    if(is_indonesian):
+        factory = StemmerFactory()
+        stemmer = factory.create_stemmer()
+    else:
+        stemmer = PorterStemmer()
     newquery = []
     token_frequency = {}
     newsentences = {}
@@ -226,9 +231,13 @@ def get_linked_term_in_documents(text_sentences, dict, queries):
                             newquery.append(new_word)
     return newquery, token_frequency, newsentences, fitqueries
 
-def term_in_documents_frequency(text_sentences, dict, queries):
+def term_in_documents_frequency(text_sentences, dict, queries, is_indonesian):
+    if(is_indonesian):
+        factory = StemmerFactory()
+        stemmer = factory.create_stemmer()
+    else:
+        stemmer = PorterStemmer()
     frequency_matrix = {}
-    stemmer = PorterStemmer()
     for docnum, sentences in text_sentences.items():
         freq_table = {}
         for sent in sentences:
