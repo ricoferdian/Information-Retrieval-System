@@ -1,4 +1,5 @@
 import pdfplumber
+import imageio
 
 def loadDocuments(filename):
     print('opening filename',filename)
@@ -23,3 +24,11 @@ def loadDocuments(filename):
                 if newtext is not None:
                     text +=loaded_page.extract_text()
             return text
+
+def loadImages(filename):
+    im = None
+    try:
+        im = imageio.imread(filename).astype('uint8')
+    except Exception as e:
+        print('Terjadi kesalahan dalam membuka file : ',e)
+    return im

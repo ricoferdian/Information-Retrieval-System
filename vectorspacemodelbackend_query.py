@@ -84,7 +84,7 @@ def diceSimilarity(query_result,document_result,dot_document_result):
         if term_weight == 0 or query_result == 0:
             doc_similarity[docnum] = 0
         else:
-            doc_similarity[docnum] = 2*abs(dot_document_result[docnum])/(pow(query_result,2)+pow(term_weight,2))
+            doc_similarity[docnum] = 2*abs(dot_document_result[docnum])/(pow(abs(query_result),2)+pow(abs(term_weight),2))
     return doc_similarity
 
 def print_tabel_hasil(queries, query_matrix, query_result, document_matrix, document_result, dot_document_matrix, dot_document_result):

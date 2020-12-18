@@ -21,11 +21,14 @@ import sys
 import random
 import plot
 import summarize
+import imageio
 
 import tfidfbackend_query as tfidf_backend
 import booleanbackend_query as bool_backend
 import summarize_file
 import documentLoader as docloader
+import featureExtractionBackend as extract_feature
+import euclideanDistanceRank as euclidean_dist
 
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -47,7 +50,6 @@ class TableModel(QAbstractTableModel):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
-
 
 class TfIdfTableDialog(QDialog):
     def __init__(self, tabledata, parent=None):
@@ -233,13 +235,19 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.tab1 = QWidget()
         self.tab2 = QWidget()
+        self.tab3 = QWidget()
+        self.tab4 = QWidget()
 
         self.tabs.resize(300,200)
         self.tabs.addTab(self.tab1, "Membuat Summary")
-        self.tabs.addTab(self.tab2, "Mesin Pencari")
+        self.tabs.addTab(self.tab2, "Mesin Pencari Dokumen Teks")
+        self.tabs.addTab(self.tab3, "Mesin Pencari Citra Basis Teks")
+        self.tabs.addTab(self.tab4, "Mesin Pencari Citra Basis Konten")
 
         self.init_search_engine_tab()
         self.init_summarization_tab()
+        self.init_search_text_image_tab()
+        self.init_search_content_image_tab()
 
         self.mainlayout.addWidget(self.tabs)
 
@@ -464,6 +472,163 @@ class MainWindow(QMainWindow):
 
         self.tab2.setLayout(h_layout_main)
 
+    def init_search_text_image_tab(self):
+        self.document_list_tbir = []
+        self.preloaded_documents_tbir = {}
+        self.dictfile_tbir = ''
+        # Main Layout tab 3 : text based image retrieval
+        h_layout_main = QHBoxLayout()
+
+        v_layout_left = QVBoxLayout()
+        v_layout_center = QVBoxLayout()
+        v_layout_right = QVBoxLayout()
+
+        h_layout_left_top = QHBoxLayout()
+        h_layout_left_center = QHBoxLayout()
+        h_layout_left_bottom = QHBoxLayout()
+        h_layout_left_bottom2 = QHBoxLayout()
+
+        h_layout_center_top = QHBoxLayout()
+        h_layout_center_center = QHBoxLayout()
+        h_layout_center_bottom = QHBoxLayout()
+
+        #LEFT
+        self.openmultifilebutton_tbir = QPushButton('Pilih Beberapa Dokumen')
+        self.opendirectorybutton_tbir = QPushButton('Pilih Direktori')
+        h_layout_left_top.addWidget(self.openmultifilebutton_tbir)
+        h_layout_left_top.addWidget(self.opendirectorybutton_tbir)
+        self.listfilesdir_tbir = QListWidget()
+        h_layout_left_center.addWidget(self.listfilesdir_tbir)
+        self.opendirfilebutton_tbir = QPushButton('Buka File')
+        self.cleardirfilebutton_tbir = QPushButton('Kosongkan List')
+        h_layout_left_bottom.addWidget(self.opendirfilebutton_tbir)
+        h_layout_left_bottom.addWidget(self.cleardirfilebutton_tbir)
+
+        self.openmultifilebutton_tbir.clicked.connect(self.multiple_file_open_tbir)
+        self.opendirectorybutton_tbir.clicked.connect(self.directory_open_tbir)
+
+        self.opendirfilebutton_tbir.clicked.connect(self.open_file_with_default_program_tbir)
+        self.cleardirfilebutton_tbir.clicked.connect(self.clear_file_lists_tbir)
+
+        #CENTER
+        self.searchBox_tbir = QLineEdit()
+        self.searchbutton_tbir = QPushButton('Cari')
+        h_layout_center_top.addWidget(self.searchBox_tbir)
+        h_layout_center_top.addWidget(self.searchbutton_tbir)
+        self.imageresultscroll_tbir = QScrollArea()
+        self.imageresultscroll_tbir.setWidgetResizable(True)
+        self.imageresultscrollcontent_tbir = QWidget()
+        self.gridimageresult_tbir = QGridLayout(self.imageresultscrollcontent_tbir)
+        self.imageresultscroll_tbir.setWidget(self.imageresultscrollcontent_tbir)
+        self.imageresult_tbir = []
+        self.listfilesresult_tbir = QListWidget()
+        self.listfilesresultpath_tbir = []
+        h_layout_center_center.addWidget(self.imageresultscroll_tbir)
+        # h_layout_center_center.addWidget(self.listfilesresult_tbir)
+        self.selectdictfilebutton_tbir = QPushButton('Pilih File Dictionary')
+        self.openresultfilebutton_tbir = QPushButton('Buka File TBIR')
+        h_layout_center_bottom.addWidget(self.selectdictfilebutton_tbir)
+        h_layout_center_bottom.addWidget(self.openresultfilebutton_tbir)
+
+        self.searchbutton_tbir.clicked.connect(self.search_term_tbir)
+
+        self.selectdictfilebutton_tbir.clicked.connect(self.dictfile_open_tbir)
+        self.openresultfilebutton_tbir.clicked.connect(self.open_result_file_with_default_program_tbir)
+
+        v_layout_left.addLayout(h_layout_left_top)
+        v_layout_left.addLayout(h_layout_left_center)
+        v_layout_left.addLayout(h_layout_left_bottom)
+        v_layout_left.addLayout(h_layout_left_bottom2)
+
+        v_layout_center.addLayout(h_layout_center_top)
+        v_layout_center.addLayout(h_layout_center_center)
+        v_layout_center.addLayout(h_layout_center_bottom)
+
+        h_layout_main.addLayout(v_layout_left, stretch=20)
+        h_layout_main.addLayout(v_layout_center, stretch=80)
+        
+        # Set tab layout
+        self.tab3.setLayout(h_layout_main)
+
+    def init_search_content_image_tab(self):
+        self.document_list_cbir = []
+        self.preloaded_documents_cbir = {}
+        self.queryimage_cbir = []
+
+        # Main Layout tab 3 : text based image retrieval
+        h_layout_main = QHBoxLayout()
+
+        v_layout_left = QVBoxLayout()
+        v_layout_center = QVBoxLayout()
+        v_layout_right = QVBoxLayout()
+
+        h_layout_left_top = QHBoxLayout()
+        h_layout_left_center = QHBoxLayout()
+        h_layout_left_bottom = QHBoxLayout()
+        h_layout_left_bottom2 = QHBoxLayout()
+
+        h_layout_center_top = QHBoxLayout()
+        h_layout_center_center = QHBoxLayout()
+        h_layout_center_bottom = QHBoxLayout()
+
+        #LEFT
+        self.openmultifilebutton_cbir = QPushButton('Pilih Beberapa Dokumen')
+        self.opendirectorybutton_cbir = QPushButton('Pilih Direktori')
+        h_layout_left_top.addWidget(self.openmultifilebutton_cbir)
+        h_layout_left_top.addWidget(self.opendirectorybutton_cbir)
+        self.listfilesdir_cbir = QListWidget()
+        h_layout_left_center.addWidget(self.listfilesdir_cbir)
+        self.opendirfilebutton_cbir = QPushButton('Buka File')
+        self.cleardirfilebutton_cbir = QPushButton('Kosongkan List')
+        h_layout_left_bottom.addWidget(self.opendirfilebutton_cbir)
+        h_layout_left_bottom.addWidget(self.cleardirfilebutton_cbir)
+
+        self.openmultifilebutton_cbir.clicked.connect(self.multiple_file_open_cbir)
+        self.opendirectorybutton_cbir.clicked.connect(self.directory_open_cbir)
+
+        self.opendirfilebutton_cbir.clicked.connect(self.open_file_with_default_program_cbir)
+        self.cleardirfilebutton_cbir.clicked.connect(self.clear_file_lists_cbir)
+
+        #CENTER
+        self.imagepreview_cbir = QLabel()
+        self.openimage_cbir = QPushButton('Buka File')
+        self.searchbutton_cbir = QPushButton('Cari')
+        h_layout_center_top.addWidget(self.imagepreview_cbir)
+        h_layout_center_top.addWidget(self.openimage_cbir)
+        h_layout_center_top.addWidget(self.searchbutton_cbir)
+        self.imageresultscroll_cbir = QScrollArea()
+        self.imageresultscroll_cbir.setWidgetResizable(True)
+        self.imageresultscrollcontent_cbir = QWidget()
+        self.gridimageresult_cbir = QGridLayout(self.imageresultscrollcontent_cbir)
+        self.imageresultscroll_cbir.setWidget(self.imageresultscrollcontent_cbir)
+        self.imageresult_cbir = []
+        self.listfilesresult_cbir = QListWidget()
+        self.listfilesresultpath_cbir = []
+        h_layout_center_center.addWidget(self.imageresultscroll_cbir)
+        # h_layout_center_center.addWidget(self.listfilesresult_tbir)
+        self.openresultfilebutton_cbir = QPushButton('Buka File TBIR')
+        h_layout_center_bottom.addWidget(self.openresultfilebutton_cbir)
+
+        self.openimage_cbir.clicked.connect(self.image_query_open)
+        self.searchbutton_cbir.clicked.connect(self.search_term_cbir)
+
+        self.openresultfilebutton_cbir.clicked.connect(self.open_result_file_with_default_program_cbir)
+
+        v_layout_left.addLayout(h_layout_left_top)
+        v_layout_left.addLayout(h_layout_left_center)
+        v_layout_left.addLayout(h_layout_left_bottom)
+        v_layout_left.addLayout(h_layout_left_bottom2)
+
+        v_layout_center.addLayout(h_layout_center_top)
+        v_layout_center.addLayout(h_layout_center_center)
+        v_layout_center.addLayout(h_layout_center_bottom)
+
+        h_layout_main.addLayout(v_layout_left, stretch=20)
+        h_layout_main.addLayout(v_layout_center, stretch=80)
+
+        # Set tab layout
+        self.tab4.setLayout(h_layout_main)
+
     def summarize_selection_result(self):
         print('Summary Hasil Lihat')
         selectedItem = self.listfilesresult.currentRow()
@@ -496,6 +661,14 @@ class MainWindow(QMainWindow):
         if path:
             self.dictfile = path
 
+    def dictfile_open_tbir(self):
+        # Membuka file txt kamus
+        path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Text documents (*.txt)")
+
+        # Memvalidasi data kemudian melakukan pembacaan data file txt
+        if path:
+            self.dictfile_tbir = path
+
     def algoritmaChanged(self, i):
         self.currentAlgorithm = i+1
         print('self.currentAlgorithm',self.currentAlgorithm)
@@ -509,6 +682,188 @@ class MainWindow(QMainWindow):
                     self.preloaded_documents[document] = docloader.loadDocuments(document)
                 else:
                     print("ALREADY PRELOADED. SKIPPING...")
+
+    def preloadDocuments_tbir(self, document_list_tbir):
+        print("self.document_list_tbir",self.document_list_tbir)
+        for document in self.document_list_tbir:
+            print("self.preloaded_documents_tbir",self.preloaded_documents_tbir)
+            if document in self.preloaded_documents_tbir:
+                print("self.preloaded_documents[document]", self.preloaded_documents_tbir[document])
+                if self.preloaded_documents_tbir[document] is None:
+                    print("NOT PRELOADED. PRELOADING...")
+                    file_without_extension = os.path.splitext(document)[0]
+                    descfname = file_without_extension +'.txt'
+                    if os.path.isfile(descfname):
+                        self.preloaded_documents_tbir[document] = docloader.loadDocuments(descfname)
+                else:
+                    print("ALREADY PRELOADED. SKIPPING...")
+                print("self.preloaded_documents_tbir",self.preloaded_documents_tbir)
+
+    def preloadDocuments_cbir(self, document_list_cbir):
+        for document in self.document_list_cbir:
+            if document in self.preloaded_documents_cbir:
+                print("self.preloaded_documents[document]", self.preloaded_documents_cbir[document])
+                if self.preloaded_documents_cbir[document] is None:
+                    print("NOT PRELOADED. PRELOADING...")
+                    # Langsung preload
+                    # self.preloaded_documents_cbir[document] = docloader.loadImages(document)
+
+                    # Preload dengan ekstarksi fitur, dan fiturnya disimpan
+                    image = docloader.loadImages(document)
+                    feature = extract_feature.extract_features(image)
+                    self.preloaded_documents_cbir[document] = feature
+                else:
+                    print("ALREADY PRELOADED. SKIPPING...")
+                print("self.preloaded_documents_cbir",self.preloaded_documents_cbir)
+
+    def image_query_open(self):
+        global screenWidth
+        global screenHeight
+
+        path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Images (*.bmp *.jpg *.png);")
+        if path:
+            try:
+                wlabel, hlabel = 200, 200
+
+                realpixmap = QPixmap(path)
+                self.queryimage_cbir = imageio.imread(path).astype('uint8')
+                self.imagepreview_cbir.setPixmap(realpixmap.scaled(wlabel,hlabel,Qt.KeepAspectRatio))
+            except Exception as e:
+                self.dialog_critical(str(e))
+            else:
+                self.path = path
+                self.update_title()
+
+    def search_term_tbir(self):
+        global screenWidth
+        global screenHeight
+
+        print("screenWidth",screenWidth)
+        print("screenHeight",screenHeight)
+        print("TBIR")
+        term_dicari = self.searchBox_tbir.text()
+        print(term_dicari)
+        if(term_dicari and len(self.document_list_tbir) and self.dictfile_tbir):
+            print('mencarih kwwkkwwkwkwkwk')
+            self.preloadDocuments_tbir(self.document_list_tbir)
+
+            print('vsm cosine similarity')
+            dictrank, found_sentences, fit_queries = tfidf_backend.search_tf_idf_preloaded(term_dicari.lower(),
+                                                                                           self.preloaded_documents_tbir,
+                                                                                           self.dictfile_tbir, None)
+            print('dictrank', dictrank)
+            self.listfilesresult_tbir.clear()
+
+            print("self.imageresult_tbir",self.imageresult_tbir)
+            for imagewidget in self.imageresult_tbir:
+                print("imagewidget",imagewidget)
+                self.gridimageresult_tbir.removeWidget(imagewidget)
+                imagewidget.deleteLater()
+                imagewidget = None
+
+            self.imageresult_tbir = [0 for i in range(len(dictrank))]
+
+            print("self.imageresult_tbir",self.imageresult_tbir)
+
+            idx = 0
+
+            iidx = 0
+            jidx = 0
+            self.listfilesresultpath_tbir = []
+            for key, weight in dictrank.items():
+                print('key', key)
+                print('weight', weight)
+                head, tail = os.path.split(self.document_list_tbir[key])
+
+                self.imageresult_tbir[idx] = QLabel()
+
+                wlabel, hlabel = int(screenWidth * 0.2),int(screenHeight * 0.2)
+
+                realpixmap = QPixmap(self.document_list_tbir[key])
+                self.imageresult_tbir[idx].setPixmap(realpixmap.scaled(wlabel,hlabel,Qt.KeepAspectRatio))
+
+                self.gridimageresult_tbir.addWidget(self.imageresult_tbir[idx],iidx,jidx)
+
+                # self.listfilesresult_tbir.addItem(
+                #     str(tail) + found_sentences[key] + "\nQuery ditemukan : " + fit_queries[key] + "\nPath : " + str(
+                #         self.document_list_tbir[key]) + "\nScore : " + str(weight))
+                self.listfilesresultpath_tbir.append(self.document_list_tbir[key])
+
+                if idx % 10 is 0:
+                    jidx += 1
+                    iidx = 0
+                else:
+                    iidx += 1
+                idx += 1
+            print("self.listfilesresultpath_tbir",self.listfilesresultpath_tbir)
+        else:
+            self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
+
+    def search_term_cbir(self):
+        global screenWidth
+        global screenHeight
+
+        print("screenWidth",screenWidth)
+        print("screenHeight",screenHeight)
+        print("CBIR")
+
+        term_dicari = self.queryimage_cbir
+        print(term_dicari)
+        if(term_dicari is not None and len(self.document_list_cbir)):
+            print('mencarih MENGGUNAKAN CBIR')
+            self.preloadDocuments_cbir(self.document_list_cbir)
+
+            query_feature = extract_feature.extract_features(term_dicari)
+
+            dictrank = euclidean_dist.euclideanDistance(query_feature,self.preloaded_documents_cbir)
+            print('dictrank', dictrank)
+            self.listfilesresult_tbir.clear()
+
+            print("self.imageresult_tbir", self.imageresult_cbir)
+            for imagewidget in self.imageresult_cbir:
+                print("imagewidget", imagewidget)
+                self.gridimageresult_cbir.removeWidget(imagewidget)
+                imagewidget.deleteLater()
+                imagewidget = None
+
+            self.imageresult_cbir = [0 for i in range(len(dictrank))]
+
+            print("self.imageresult_tbir", self.imageresult_cbir)
+
+            idx = 0
+
+            iidx = 0
+            jidx = 0
+            self.listfilesresultpath_cbir = []
+            for key, weight in dictrank.items():
+                print('key', key)
+                print('distance', weight)
+                head, tail = os.path.split(self.document_list_cbir[key])
+
+                self.imageresult_cbir[idx] = QLabel()
+
+                wlabel, hlabel = int(screenWidth * 0.2), int(screenHeight * 0.2)
+
+                realpixmap = QPixmap(self.document_list_cbir[key])
+                self.imageresult_cbir[idx].setPixmap(realpixmap.scaled(wlabel, hlabel, Qt.KeepAspectRatio))
+
+                self.gridimageresult_cbir.addWidget(self.imageresult_cbir[idx], iidx, jidx)
+
+                # self.listfilesresult_tbir.addItem(
+                #     str(tail) + found_sentences[key] + "\nQuery ditemukan : " + fit_queries[key] + "\nPath : " + str(
+                #         self.document_list_tbir[key]) + "\nScore : " + str(weight))
+                self.listfilesresultpath_cbir.append(self.document_list_cbir[key])
+
+                if idx % 10 is 0:
+                    jidx += 1
+                    iidx = 0
+                else:
+                    iidx += 1
+                idx += 1
+            print("self.listfilesresultpath_tbir", self.listfilesresultpath_tbir)
+        else:
+            self.dialog_critical("Tidak ada file yang dapat dicari !")
+
     def search_term(self):
         term_dicari = self.searchBox.text()
         print(term_dicari)
@@ -572,6 +927,24 @@ class MainWindow(QMainWindow):
         else:
             self.dialog_critical("Tidak ada file dipilih !")
 
+    def open_file_with_default_program_tbir(self):
+        selectedItem = self.listfilesdir_tbir.currentItem()
+        if(selectedItem):
+            selectedItem = selectedItem.text()
+            print('selectedItem',selectedItem)
+            os.startfile(selectedItem)
+        else:
+            self.dialog_critical("Tidak ada file dipilih !")
+
+    def open_file_with_default_program_cbir(self):
+        selectedItem = self.listfilesdir_cbir.currentItem()
+        if(selectedItem):
+            selectedItem = selectedItem.text()
+            print('selectedItem',selectedItem)
+            os.startfile(selectedItem)
+        else:
+            self.dialog_critical("Tidak ada file dipilih !")
+
     def showFileContent(self):
         if (len(self.document_list) and self.dictfile):
             self.preloadDocuments(self.document_list)
@@ -581,13 +954,55 @@ class MainWindow(QMainWindow):
         else:
             self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
 
+    # def showFileContent_tbir(self):
+    #     if (len(self.document_list_tbir) and self.dictfile_tbir):
+    #         self.preloadDocuments_tbir(self.document_list_tbir)
+    #         dlg = ShowFilePreprocessing(self.preloaded_documents_tbir, self.dictfile_tbir)
+    #         if dlg.exec_():
+    #             print("Success exec")
+    #     else:
+    #         self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
+    #
+    # def showFileContent_cbir(self):
+    #     if (len(self.document_list_cbir) and self.dictfile_cbir):
+    #         self.preloadDocuments_cbir(self.document_list_cbir)
+    #         dlg = ShowFilePreprocessing(self.preloaded_documents_cbir, self.dictfile_cbir)
+    #         if dlg.exec_():
+    #             print("Success exec")
+    #     else:
+    #         self.dialog_critical("Tidak ada file yang dapat dicari, atau file kamus belum dibuka !")
+
     def open_result_file_with_default_program(self):
         selectedItem = self.listfilesresult.currentRow()
-        print('selectedItem',selectedItem)
+        print('selectedItem_default',selectedItem)
         print('self.listfilesresultpath',self.listfilesresultpath)
         print('len(self.listfilesresultpath)',len(self.listfilesresultpath))
         if(selectedItem is not None and len(self.listfilesresultpath)-1>=selectedItem):
             selectedItem = self.listfilesresultpath[selectedItem]
+            print('selectedItem',selectedItem)
+            os.startfile(selectedItem)
+        else:
+            self.dialog_critical("Tidak ada file dipilih !")
+
+    def open_result_file_with_default_program_tbir(self):
+        selectedItem = self.listfilesresult_tbir.currentRow()
+        print('selectedItem_tbir',selectedItem)
+        print('self.listfilesresultpath_tbir',self.listfilesresultpath_tbir)
+        print('len(self.listfilesresultpath_tbir)',len(self.listfilesresultpath_tbir))
+        if(selectedItem is not None and len(self.listfilesresultpath_tbir)-1>=selectedItem):
+            selectedItem = self.listfilesresultpath_tbir[selectedItem]
+            print('selectedItem_tbir',selectedItem)
+            os.startfile(selectedItem)
+        else:
+            self.dialog_critical("Tidak ada file dipilih !")
+
+    def open_result_file_with_default_program_cbir(self):
+        selectedItem = self.listfilesresult_cbir.currentRow()
+        print('selectedItemteeeess',selectedItem)
+        print('self.listfilesresultpath',self.listfilesresultpath_cbir)
+        print('len(self.listfilesresultpath)',len(self.listfilesresultpath_cbir))
+        if(selectedItem is not None and len(self.listfilesresultpath_cbir)-1>=selectedItem):
+            selectedItem = self.listfilesresultpath_cbir[selectedItem]
             print('selectedItem',selectedItem)
             os.startfile(selectedItem)
         else:
@@ -598,10 +1013,30 @@ class MainWindow(QMainWindow):
         self.preloaded_documents = {}
         self.listfilesdir.clear()
 
+    def clear_file_lists_tbir(self):
+        self.document_list_tbir = []
+        self.preloaded_documents_tbir = {}
+        self.listfilesdir_tbir.clear()
+
+    def clear_file_lists_cbir(self):
+        self.document_list_cbir = []
+        self.preloaded_documents_cbir = {}
+        self.listfilesdir_cbir.clear()
+
     def update_file_lists(self):
         self.listfilesdir.clear()
         for filedir in self.document_list:
             self.listfilesdir.addItem(filedir)
+
+    def update_file_lists_tbir(self):
+        self.listfilesdir_tbir.clear()
+        for filedir in self.document_list_tbir:
+            self.listfilesdir_tbir.addItem(filedir.splitlines()[0])
+
+    def update_file_lists_cbir(self):
+        self.listfilesdir_cbir.clear()
+        for filedir in self.document_list_cbir:
+            self.listfilesdir_cbir.addItem(filedir.splitlines()[0])
 
     def directory_open(self):
         path = QFileDialog.getExistingDirectory(self,"Select Directory")
@@ -618,6 +1053,52 @@ class MainWindow(QMainWindow):
                     self.preloaded_documents[path+'/'+ file] = None
             self.update_file_lists()
 
+    def directory_open_tbir(self):
+        path = QFileDialog.getExistingDirectory(self,"Select Directory")
+        if(path):
+            print('pathdir',path)
+            for file in os.listdir(path):
+                if file.endswith(".jpg"):
+                    file_without_extension = os.path.splitext(file)[0]
+                    descfname = path+'/'+ file_without_extension +'.txt'
+                    if os.path.isfile(descfname):
+                        self.preloaded_documents_tbir[path+'/'+ file] = None
+                        self.document_list_tbir.append(path+'/'+ file)
+                    print(os.path.join(path, file))
+                    print(descfname)
+                elif file.endswith(".png"):
+                    file_without_extension = os.path.splitext(file)[0]
+                    descfname = path+'/'+ file_without_extension +'.txt'
+                    if os.path.isfile(descfname):
+                        self.preloaded_documents_tbir[path+'/'+ file] = None
+                        self.document_list_tbir.append(path+'/'+ file)
+                    print(os.path.join(path, file))
+                    print(descfname)
+                elif file.endswith(".bmp"):
+                    file_without_extension = os.path.splitext(file)[0]
+                    descfname = path+'/'+ file_without_extension +'.txt'
+                    if os.path.isfile(descfname):
+                        self.preloaded_documents_tbir[path+'/'+ file] = None
+                        self.document_list_tbir.append(path+'/'+ file)
+                    print(os.path.join(path, file))
+                    print(descfname)
+            self.update_file_lists_tbir()
+
+    def directory_open_cbir(self):
+        path = QFileDialog.getExistingDirectory(self,"Select Directory")
+        if(path):
+            print('pathdir',path)
+            for file in os.listdir(path):
+                if file.endswith(".jpg"):
+                    self.preloaded_documents_cbir[path+'/'+ file] = None
+                    self.document_list_cbir.append(path+'/'+ file)
+                elif file.endswith(".png"):
+                    self.preloaded_documents_cbir[path+'/'+ file] = None
+                    self.document_list_cbir.append(path+'/'+ file)
+                elif file.endswith(".bmp"):
+                    self.preloaded_documents_cbir[path+'/'+ file] = None
+                    self.document_list_cbir.append(path+'/'+ file)
+            self.update_file_lists_cbir()
 
     def multiple_file_open(self):
         paths, _ = QFileDialog.getOpenFileNames(self, "Open file", "", "Text documents (*.txt);PDF documents (*.pdf)")
@@ -628,6 +1109,31 @@ class MainWindow(QMainWindow):
                 self.document_list.append(path)
                 self.preloaded_documents[path] = None
         self.update_file_lists()
+
+    def multiple_file_open_tbir(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Open file", "",
+                                                "Images (*.bmp *.jpg *.png);")
+        print('paths', paths)
+        for path in paths:
+            print('path', path)
+            if path:
+                file_without_extension = os.path.splitext(path)[0]
+                descfname = file_without_extension +'.txt'
+                if os.path.isfile(descfname):
+                    self.document_list_tbir.append(path)
+                    self.preloaded_documents_tbir[path] = None
+        self.update_file_lists_tbir()
+
+    def multiple_file_open_cbir(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Open file", "",
+                                                "Images (*.bmp *.jpg *.png);")
+        print('paths', paths)
+        for path in paths:
+            print('path', path)
+            if path:
+                self.document_list_cbir.append(path)
+                self.preloaded_documents_cbir[path] = None
+        self.update_file_lists_cbir()
 
     def init_summarization_tab(self):
         v_layout_l = QVBoxLayout()
@@ -1004,8 +1510,17 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    global screenWidth
+    global screenHeight
+
     app = QApplication(sys.argv)
     app.setApplicationName("Sistem Temu Kembali Informasi")
+
+    screen = app.primaryScreen()
+    size = screen.size()
+
+    screenWidth = size.width()
+    screenHeight = size.height()
 
     window = MainWindow()
     app.exec_()
